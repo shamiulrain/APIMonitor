@@ -1,0 +1,35 @@
+name: api_monitor
+description: "A Netfox-style in-app network inspector for Flutter. Capture, inspect, search and share every HTTP request your app makes — right on the device."
+version: 0.1.0
+homepage: https://github.com/shamiulrain/APIMonitor
+repository: https://github.com/shamiulrain/APIMonitor
+issue_tracker: https://github.com/shamiulrain/APIMonitor/issues
+
+environment:
+  sdk: ^3.13.3
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Optional but recommended integrations: the Dio interceptor and the
+  # package:http client wrapper.
+  dio: ^5.0.0
+  http: ^1.0.0
+
+  # Shake-to-open gesture, sharing and app info (Netfox parity).
+  sensors_plus: ^6.0.0
+  share_plus: ^10.0.0
+  package_info_plus: ^8.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+# For information on the generic Dart part of this file, see
+# https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
