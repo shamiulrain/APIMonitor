@@ -1,4 +1,4 @@
-# api_monitor
+# APIMonitor
 
 <p>
   <a href="https://pub.dev/packages/api_monitor"><img src="https://img.shields.io/pub/v/api_monitor.svg" alt="pub version"></a>
