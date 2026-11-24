@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:api_monitor/api_monitor.dart';
@@ -163,6 +164,47 @@ void main() {
       expect(stats.success, 1);
       expect(stats.failed, 1);
       expect(stats.averageDuration.inMilliseconds, 120);
+    });
+  });
+
+  group('global capture', () {
+    late HttpServer server;
+
+    setUp(() async {
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      server.listen((request) async {
+        request.response.headers.contentType = ContentType.json;
+        request.response.write('{"ok":true}');
+        await request.response.close();
+      });
+      ApiMonitor.instance.stop(clear: true);
+      ApiMonitor.instance.start();
+    });
+
+    tearDown(() async {
+      ApiMonitor.instance.stop();
+      await server.close(force: true);
+    });
+
+    test('buffers response bodies read through Stream.cast()', () async {
+      final client = HttpClient();
+      final request = await client.getUrl(
+        Uri.parse('http://127.0.0.1:${server.port}/cast'),
+      );
+      final response = await request.close();
+
+      // Dio's IO adapter consumes responses with `Stream.cast`, which
+      // subscribes with a null onData handler and attaches the real one
+      // afterwards. The monitor must still record the bytes in that case.
+      final chunks = await response.cast<List<int>>().toList();
+      expect(chunks.expand((chunk) => chunk), isNotEmpty);
+
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      final record = ApiMonitor.instance.store.records.single;
+      expect(record.statusCode, 200);
+      expect(record.responseBody, contains('ok'));
+      client.close();
     });
   });
 

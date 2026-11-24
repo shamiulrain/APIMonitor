@@ -437,23 +437,42 @@ class MonitoredHttpClientResponse extends Stream<List<int>>
     void Function()? onDone,
     bool? cancelOnError,
   }) {
-    return _inner.listen(
-      (data) {
-        _capture(data);
-        onData?.call(data);
+    // `Stream.cast` — used by Dio's IO adapter for every response — subscribes
+    // with a null onData handler and installs the real one afterwards through
+    // `StreamSubscription.onData`. Teeing the inner stream directly would let
+    // those callers consume the bytes without ever reaching `_capture`, so the
+    // recorded response body stayed empty. Buffering through our own controller
+    // keeps the tee in front of every consumer, however it listens.
+    late final StreamController<List<int>> controller;
+    StreamSubscription<List<int>>? innerSubscription;
+
+    controller = StreamController<List<int>>(
+      onListen: () {
+        innerSubscription = _inner.listen(
+          (data) {
+            _capture(data);
+            controller.add(data);
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            _completeWithError(error);
+            controller.addError(error, stackTrace);
+          },
+          onDone: () {
+            _completeSuccessfully();
+            controller.close();
+          },
+          cancelOnError: cancelOnError,
+        );
       },
-      onError: (Object error, StackTrace stackTrace) {
-        _completeWithError(error);
-        if (onError is void Function(Object, StackTrace)) {
-          onError(error, stackTrace);
-        } else if (onError is void Function(Object)) {
-          onError(error);
-        }
-      },
-      onDone: () {
-        _completeSuccessfully();
-        onDone?.call();
-      },
+      onPause: () => innerSubscription?.pause(),
+      onResume: () => innerSubscription?.resume(),
+      onCancel: () => innerSubscription?.cancel(),
+    );
+
+    return controller.stream.listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
       cancelOnError: cancelOnError,
     );
   }
